@@ -10,7 +10,7 @@ Bulk Hyper-V creation tool.
 -Once manual part complete, Run first script to enable guest services and copy script files to each VM
 -Last part, log in to each VM and run the PS1 file (Automatically, adds to domain, renames, setup net adapter settings, restarts)
 
-.REQUIRED USER INPUT
+.USER-INPUT
 -Fill out and save excel sheet (Hyper-V_Setup_Details.xlsx) with headers -- 
 Host,SourceOS,SourceData,VMNameHyperV,SwitchName,Memory,Generation,ProcessorCount,VLAN,VHDPath,TargetOS,TargetData,
 ServerName,CurrentNetworkAdapterName,NewNetworkAdapterName,IPAddress,Subnet,GatewayAddress,DNS,WINS,Domain,User
