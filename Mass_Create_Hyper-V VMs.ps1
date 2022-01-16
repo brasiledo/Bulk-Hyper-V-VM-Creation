@@ -4,7 +4,8 @@ Bulk Hyper-V creation tool.
  
 .DESCRIPTION
 -User inputted data (EXCEL FILE) used to automate all steps
--Copies VHDX files template (OS and DATA).  Copies to directed file path and renames files.  Uses these for new VMs
+-will convert xlsx file into csv
+-Copies VHDX files template (OS and DATA).  Copies to directed file path and renames files.  Applies VHDX to new VMs. -- IF NULL  will skip
 -Auomates creating VMs in bulk
 -Creates powershell scripts that automates the VM build process and copies these scripts to HOST server 
 -Once VMs are created, must manually power on VM and complete OS setup
@@ -13,13 +14,14 @@ Bulk Hyper-V creation tool.
 
                ----REQUIRED USER INPUT----
                
--Fill out and save excel sheet (Hyper-V_Setup_Details.xlsx) with headers -- 
+-Create excel sheet (Hyper-V_Setup_Details.xlsx) with the following headers -- 
+
 Host,SourceOS,SourceData,VMNameHyperV,SwitchName,Memory,Generation,ProcessorCount,VLAN,VHDPath,TargetOS,TargetData,
 ServerName,CurrentNetworkAdapterName,NewNetworkAdapterName,IPAddress,Subnet,GatewayAddress,DNS,WINS,Domain,User
 
-Store this script along along with this created excel file in the same folder.  
+Save in the same folder as this powershell script.
 
-Examples for parameters
+Examples for parameters:
 
 Host - hostname of host
 VMNameHyperV - VM Name
