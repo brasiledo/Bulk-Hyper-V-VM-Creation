@@ -100,69 +100,76 @@ Pause
 #copy to PS1 file serverscripts, to run direct on the VM
 
    Import-Csv -Path $MasterFile -Delimiter ',' | Where-Object { $_.PSObject.Properties.Value -ne '' } | foreach {
-    $CurrentNetworkAdapterName = $($_.CurrentNetworkAdapterName)
-    $NewNetworkAdapterName = $($_.NewNetworkAdapterName)
-    $ServerName = $($_.ServerName)
-    $IPAddress = $($_.IPAddress)
-    $Subnet = $($_.Subnet)
-    $GatewayAddress = $($_.GatewayAddress)
-    $DNS = $($_.DNS)
-    $WINS = $($_.WINS)
-    $Domain = $($_.Domain)
-    $user = $($_.user)
-    $Host = $($_.Host)
+   param (
+    $CurrentNetworkAdapterName = $($_.CurrentNetworkAdapterName),
+    $NewNetworkAdapterName = $($_.NewNetworkAdapterName),
+    $ServerName = $($_.ServerName),
+    $IPAddress = $($_.IPAddress),
+    $Subnet = $($_.Subnet),
+    $GatewayAddress = $($_.GatewayAddress),
+    $DNS = $($_.DNS),
+    $WINS = $($_.WINS),
+    $Domain = $($_.Domain),
+    $user = $($_.user),
+    $HostIP = $($_.HostIP),
+    $VMNameHyperV = $($_.VMNameHyperV),
+    $outputfile = "C:\scripts\ServerSetupScripts\$ServerName.ps1"
+    )
 
+invoke-command -ComputerName "Host" -credential $cred -ScriptBlock {param($outputfile,$wins,$VMNameHyperV,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain)
 
-invoke-command -ComputerName "HOST" -credential $cred -ScriptBlock {param($outputfile,$wins,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain)
- $outputfile = "C:\scripts\ServerSetupScripts\$ServerName.ps1"
 if($WINS -eq "" -or $WINS -eq $null)
     {
     
     "Set-ExecutionPolicy Bypass" | Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Rename Adapter" | Add-Content $OutputFile
-    "Rename-NetAdapter -Name ""$CurrentNetworkAdapterName"" -NewName ""$NewNetworkAdapterName"""| Add-Content $OutputFile
+    "Rename-NetAdapter -Name '$CurrentNetworkAdapterName' -NewName '$NewNetworkAdapterName'"| Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Add Static IP Address, DNS & WINS" | Add-Content $OutputFile        
-    "netsh interface ip set address ""$NewNetworkAdapterName"" static $IPAddress $Subnet $GatewayAddress" | Add-Content $OutputFile
-    "Set-DnsClientServerAddress -InterfaceAlias “"$NewNetworkAdapterName"” -ServerAddresses $DNS" | Add-Content $OutputFile
+    "netsh interface ip set address '$NewNetworkAdapterName' static $IPAddress $Subnet $GatewayAddress" | Add-Content $OutputFile
+    "Set-DnsClientServerAddress -InterfaceAlias '$NewNetworkAdapterName' -ServerAddresses $DNS" | Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Rename VM and Join to Domain" | Add-Content $OutputFile
-    "Add-Computer -DomainName $Domain -Credential (Get-Credential $User) -NewName ""$ServerName"" -Restart"  | Add-Content $OutputFile
+    "Add-Computer -DomainName $Domain -Credential (Get-Credential $User) -NewName '$ServerName' -Restart"  | Add-Content $OutputFile
     }
      Else {
     "Set-ExecutionPolicy Bypass" | Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Rename Adapter" | Add-Content $OutputFile
-    "Rename-NetAdapter -Name ""$CurrentNetworkAdapterName"" -NewName ""$NewNetworkAdapterName"""| Add-Content $OutputFile
+    "Rename-NetAdapter -Name '$CurrentNetworkAdapterName' -NewName '$NewNetworkAdapterName'"| Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Add Static IP Address, DNS & WINS" | Add-Content $OutputFile        
-    "netsh interface ip set address ""$NewNetworkAdapterName"" static $IPAddress $Subnet $GatewayAddress" | Add-Content $OutputFile
-    "Set-DnsClientServerAddress -InterfaceAlias “"$NewNetworkAdapterName"” -ServerAddresses $DNS" | Add-Content $OutputFile
-    "netsh interface ip set wins ""$NewNetworkAdapterName"" static $WINS" | Add-Content $OutputFile
+    "netsh interface ip set address '$NewNetworkAdapterName' static $IPAddress $Subnet $GatewayAddress" | Add-Content $OutputFile
+    "Set-DnsClientServerAddress -InterfaceAlias '$NewNetworkAdapterName' -ServerAddresses $DNS" | Add-Content $OutputFile
+    "netsh interface ip set wins '$NewNetworkAdapterName' static $WINS" | Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Rename VM and Join to Domain" | Add-Content $OutputFile
-    "Add-Computer -DomainName $Domain -Credential (Get-Credential $User) -NewName ""$ServerName"" -Restart"  | Add-Content $OutputFile
+    "Add-Computer -DomainName $Domain -Credential (Get-Credential $User) -NewName '$ServerName' -Restart"  | Add-Content $OutputFile
    
     }
        
-     }-ArgumentList $outputfile,$wins,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain
-     
+     }-ArgumentList $outputfile,$wins,$VMNameHyperV,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain
      }
-   invoke-command -ComputerName "teknetdc01" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts"}
+   invoke-command -ComputerName "Host" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts\$servername*.ps1"}
    pause
-##End Create VM Setup Scripts and other HyperV Host Powershell Scripts
+
+#End Create VM Setup Scripts and other HyperV Host Powershell Scripts#
 
 
 #Start Create Powershell scripts that copy Setupfiles to VM's on HyperV Host
 
 
  Import-Csv -Path $MasterFile -Delimiter ',' | Where-Object { $_.PSObject.Properties.Value -ne '' } | foreach {
-    $VMNameHyperV = $($_.VMNameHyperV)
-    $ServerName = $($_.ServerName)
+
+ param (
+    $VMNameHyperV = $($_.VMNameHyperV),
+    $ServerName = $($_.ServerName),
+    $ScriptOutFile = "C:\scripts\ServerSetupScripts\Run_First_Script_HyperV_GuestServices_CopySetupFiles.ps1"
+    )
+
+ invoke-command -ComputerName "teknetdc01" -credential $cred -ScriptBlock {param($ScriptOutFile,$DateStamp,$VMNameHyperV,$ServerName )
     
- invoke-command -ComputerName "HOST" -credential $cred -ScriptBlock {param($ScriptOutFile,$DateStamp,$VMNameHyperV,$ServerName )
-   $ScriptOutFile = "C:\scripts\ServerSetupScripts\Run_First_Script_HyperV_GuestServices_CopySetupFiles.ps1"
     $DateStamp = get-date -uformat "%Y-%m-%d--%H-%M-%S" # Get the date
     "Powershell Scripts to Enable/Disable Guest Services and copy Setupfiles to VM's - $DateStamp"| Add-Content $ScriptOutFile
     ""| Add-Content $ScriptOutFile
@@ -170,7 +177,7 @@ if($WINS -eq "" -or $WINS -eq $null)
     ""| Add-Content $ScriptOutFile
 
   
-    "# HyperV Host "HOST" | Add-Content $ScriptOutFile 
+    "# HyperV Host $HostIP" | Add-Content $ScriptOutFile 
     "Enable-VMIntegrationService -VMName ""$VMNameHyperV""  -Name ""Guest Service Interface""" | Add-Content $ScriptOutFile
     "Copy-VMFile ""$VMNameHyperV"" -SourcePath ""C:\Powershell\$ServerName.ps1"" -DestinationPath ""C:\Powershell\$ServerName.ps1"" -CreateFullPath -FileSource Host"| Add-Content $ScriptOutFile
     "Disable-VMIntegrationService -VMName ""$VMNameHyperV""  -Name ""Guest Service Interface""" | Add-Content $ScriptOutFile
@@ -181,9 +188,9 @@ if($WINS -eq "" -or $WINS -eq $null)
    
     }
     
-   invoke-command -ComputerName "HOST" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts\"
+   invoke-command -ComputerName "teknetdc01" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts\run_first*.ps1"
    write-host ' '
-   read-host '                               End of Script.  Press Enter to Exit.'
+   read-host '                               End of script.  Press Enter to exit.'
    write-host''}
    
 #End Create Powershell scripts that copy Setupfiles to VM's on HyperV Host  
