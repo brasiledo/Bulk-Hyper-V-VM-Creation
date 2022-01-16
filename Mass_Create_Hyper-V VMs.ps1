@@ -4,6 +4,7 @@ Bulk Hyper-V creation tool.
  
 .DESCRIPTION
 -User inputted data (EXCEL FILE) used to automate all steps
+-Copies VHDX files template (OS and DATA).  Copies to directed file path and renames files.  Uses these for new VMs
 -Auomates creating VMs in bulk
 -Creates powershell scripts that automates the VM build process and copies these scripts to HOST server 
 -Once VMs are created, must manually power on VM and complete OS setup
@@ -32,9 +33,9 @@ DNS - Machine DNS
 WINS - Machine WINS
 Domain - Domain for VM
 User - Domain\username (used for adding machine to domain)
-SourceOS - source of OS VHD to be used
-SourceDATA - source of DATA VHD to be used
-VHDPath - path to store VM VHD -- ex. (D:\Hyper-v\Hard Disks)
+SourceOS - source of OS VHD to be used (actual path to file, make sure this is on the HOST machine)
+SourceDATA - source of DATA VHD to be used (actual path to file, make sure this is on the HOST machine)
+VHDPath - path to store VM VHD -- ex. (D:\Hyper-v\Hard Disks\)
 TargetOS - OS VHDX file name   ex. 'OS.VHDX'
 TargetData - Data VHDX file name ex. 'DATA.VHDX'
 
@@ -114,11 +115,11 @@ Param (
      
   #Copy VHD for OS and DATA drives to set location, ONLY IF ADDED on Spreadsheet
   
-   IF ($SourceOS -ne '') {
-New-Item -Path $VHDPATH -Name $VMNameHyperV -ItemType directory
-Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\targetOS"}
+     IF ($SourceOS -ne '') {
+New-Item -ItemType "directory" -Path "$VHDPATH\$VMNameHyperV"
+Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$TargetOS"}
    else {write-host "SourceOS is empty, OS VHD NOT Copied!"}
-   IF ($SourceDATA -ne ''){Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$SourceDATA"}
+   IF ($SourceDATA -ne ''){Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$targetDATA"}
    Else {write-host "Sourcedata is empty, DATA VHD NOT Copied!"}
    start-sleep -s 4
        } -ArgumentList $TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData,$VMNameHyperV
