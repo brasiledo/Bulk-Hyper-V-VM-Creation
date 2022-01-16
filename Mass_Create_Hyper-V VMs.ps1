@@ -3,12 +3,46 @@
 Bulk Hyper-V creation tool.  
  
 .DESCRIPTION
+-User inputted data (EXCEL FILE) used to automate all steps
+-Auomates creating VMs in bulk
+-Creates powershell scripts that automates the VM build process and copies these scripts to HOST server 
+-Once VMs are created, must manually power on VM and complete OS setup
+-Once manual part complete, Run first script to enable guest services and copy script files to each VM
+-Last part, log in to each VM and run the PS1 file (Automatically, adds to domain, renames, setup net adapter settings, restarts)
+
+.REQUIRED USER INPUT
 -Fill out and save excel sheet (Hyper-V_Setup_Details.xlsx) with headers -- 
 Host,SourceOS,SourceData,VMNameHyperV,SwitchName,Memory,Generation,ProcessorCount,VLAN,VHDPath,TargetOS,TargetData,
 ServerName,CurrentNetworkAdapterName,NewNetworkAdapterName,IPAddress,Subnet,GatewayAddress,DNS,WINS,Domain,User
 
--For Host, use the computername
--Store the script along with the excel file in the same folder, once excel sheet filled out, run script from local machine
+Store this script along along with this created excel file in the same folder.  
+
+Examples for parameters
+
+Host - hostname of host
+VMNameHyperV - VM Name
+ServerName - VM Hostname
+CurrentNetworkAdapterName - 'Ethernet'
+NewNetworkAdapterName - ex. 'Web'
+IPAddress - Machine IP
+Subnet - Machine Subnet
+GatewayAddress- Machine Gateway
+DNS - Machine DNS
+WINS - Machine WINS
+Domain - Domain for VM
+User - Domain\username (used for adding machine to domain)
+SourceOS - source of OS VHD to be used
+SourceDATA - source of DATA VHD to be used
+VHDPath - path to store VM VHD -- ex. (D:\Hyper-v\Hard Disks)
+TargetOS - OS VHDX file name   ex. 'OS.VHDX'
+TargetData - Data VHDX file name ex. 'DATA.VHDX'
+
+       (settings within the VM)
+Memory- ex. 8GB
+SwitchName - 
+Generation
+ProcessorCount
+VLAN
 
 Script uses an invoke-command for remote connection to the host, it will then send commands to create the VM and also create 
 a folder on the host 'c:\scripts\serversetupscripts' that will have all the powershell commands needed to run on the host after
@@ -79,11 +113,13 @@ Param (
      
   #Copy VHD for OS and DATA drives to set location, ONLY IF ADDED on Spreadsheet
   
-   IF ($SourceOS -ne '') {Copy-Item -Path $SourceOS -Destination $VHDPATH\$TargetOS}
+   IF ($SourceOS -ne '') {
+New-Item -Path $VHDPATH -Name $VMNameHyperV -ItemType directory
+Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\targetOS"}
    else {write-host "SourceOS is empty, OS VHD NOT Copied!"}
-   IF ($SourceDATA -ne ''){Copy-Item -Path $SourceData -Destination $VHDPATH\$TargetData}
+   IF ($SourceDATA -ne ''){Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$SourceDATA"}
    Else {write-host "Sourcedata is empty, DATA VHD NOT Copied!"}
-   start-sleep -s 2
+   start-sleep -s 4
        } -ArgumentList $TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData,$VMNameHyperV
        }
     
@@ -95,7 +131,7 @@ Param (
 #Add SwitchName, OS VHD Drive IF Present on the Spreadsheet
 
     IF ($TargetOS -and $SwitchName -ne ""){
-    Set-VM -SwitchName "$SwitchName" -VHDPath "$VHDPATH\$TargetOS"}
+    Set-VM -SwitchName "$SwitchName" -VHDPath "$VHDPATH\$VMNameHyperV\$SourceOS"}
     else {write-host 'VHD is empty, SwitchName not set'}
 
 #Set Networking/VLAN and Add HardDrive IF Present on the Spreadsheet
@@ -107,7 +143,7 @@ Param (
     
 #Set Data VHD IF Present on the Spreadsheet 
  
-    Get-VM $VMNameHyperV | Add-VMHardDiskDrive -ControllerType SCSI -ControllerNumber 0 -Path $VHDPATH\$TargetData}
+    Get-VM $VMNameHyperV | Add-VMHardDiskDrive -ControllerType SCSI -ControllerNumber 0 -Path "$TargetData,$VHDPATH,$SourceOS,$SourceData"}
      else {write-host 'TargetData is Empty, HardDrive not added'}
 
   }  -ArgumentList $VMNameHyperV,$memory,$ProcessorCount,$HostIP,$Generation,$VLAN,$TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData
