@@ -4,7 +4,8 @@ Bulk Hyper-V creation tool.
  
 .DESCRIPTION
 -Fill out and save excel sheet (Hyper-V_Setup_Details.xlsx) with headers -- 
-Host	SourceOS	SourceData	VMNameHyperV	SwitchName	Memory	Generation	ProcessorCount	VLAN	VHDPath	TargetOS	TargetData	ServerName	CurrentNetworkAdapterName	NewNetworkAdapterName	IPAddress	Subnet	GatewayAddress	DNS	WINS	Domain	User
+Host,SourceOS,SourceData,VMNameHyperV,SwitchName,Memory,Generation,ProcessorCount,VLAN,VHDPath,TargetOS,TargetData,
+ServerName,CurrentNetworkAdapterName,NewNetworkAdapterName,IPAddress,Subnet,GatewayAddress,DNS,WINS,Domain,User
 
 -For Host, use the computername
 -Store the script along with the excel file in the same folder, once excel sheet filled out, run script from local machine
