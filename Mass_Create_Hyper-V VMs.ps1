@@ -29,10 +29,12 @@ Date of last revision: 1/5/2022
 #>
 
 #Deletes Current CSV File 
+
     Remove-Item ".\Hyper-V_Setup_Details.csv"
      
 
  #Convert Matster Excel File to Master CSV File
+ 
     $a=gci ".\Hyper-V_Setup_Details.xlsx"
     $xlsx=new-object -comobject excel.application
     $xlsx.DisplayAlerts = $False
@@ -56,6 +58,7 @@ Date of last revision: 1/5/2022
     #$cred=(get-credential)
 
 #Create VM's on host
+
    Import-Csv -Path $MasterFile  -Delimiter ',' | Where-Object { $_.PSObject.Properties.Value -ne '' } | foreach {
 Param (
     $VMNameHyperV = $($_.VMNameHyperV),
@@ -72,35 +75,64 @@ Param (
     $SourceData = $($_.SourceData)
     
     )
-  invoke-command -ComputerName "Host" -credential $cred -ScriptBlock {param($VMNameHyperV,$memory,$ProcessorCount,$HostIP,$Generation,$VLAN,$TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData)
-     #copy VHD for OS and DATA drives to set location
-     Copy-Item -Path $SourceOS -Destination $VHDPATH\$TargetOS
-     Copy-Item -Path $SourceData -Destination $VHDPATH\$TargetData
+  invoke-command -ComputerName "$Host" -credential $cred -ScriptBlock {param($VMNameHyperV,$memory,$ProcessorCount,$HostIP,$Generation,$VLAN,$TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData)
+     
+  #Copy VHD for OS and DATA drives to set location, ONLY IF ADDED on Spreadsheet
+  
+   IF ($SourceOS -ne '') {Copy-Item -Path $SourceOS -Destination $VHDPATH\$TargetOS}
+   else {write-host "SourceOS is empty, OS VHD NOT Copied!"}
+   IF ($SourceDATA -ne ''){Copy-Item -Path $SourceData -Destination $VHDPATH\$TargetData}
+   Else {write-host "Sourcedata is empty, DATA VHD NOT Copied!"}
+   start-sleep -s 2
+       } -ArgumentList $TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData,$VMNameHyperV
+       }
     
-    #Create New VMs
-    New-VM -Name "$VMNameHyperV" -MemoryStartupBytes (Invoke-Expression $memory) -Generation "$Generation" -SwitchName "$SwitchName" -VHDPath "$VHDPATH\$TargetOS" | out-host 
-    Set-VMProcessor -VMName "$VMNameHyperV" -Count $ProcessorCount 
-    Set-VMNetworkAdapterVlan -VMName $VMNameHyperV -Access -VlanId "$VLAN"
-    Get-VM $VMNameHyperV | Add-VMHardDiskDrive -ControllerType SCSI -ControllerNumber 0 -Path $VHDPATH\$TargetData
+#Create New VMs
+
+  New-VM -Name "$VMNameHyperV" -MemoryStartupBytes (Invoke-Expression $memory) -Generation "$Generation" | out-host
+    Set-VMProcessor -VMName "$VMNameHyperV" -Count $ProcessorCount
+    
+#Add SwitchName, OS VHD Drive IF Present on the Spreadsheet
+
+    IF ($TargetOS -and $SwitchName -ne ""){
+    Set-VM -SwitchName "$SwitchName" -VHDPath "$VHDPATH\$TargetOS"}
+    else {write-host 'VHD is empty, SwitchName not set'}
+
+#Set Networking/VLAN and Add HardDrive IF Present on the Spreadsheet
+
+    IF ($VLAN -ne ""){
+    Set-VMNetworkAdapterVlan -VMName $VMNameHyperV -Access -VlanId "$VLAN"}
+    else {Write-host 'VLAN is Empty, VLAN not set'}
+    IF ($TargetData -ne "") {
+    
+#Set Data VHD IF Present on the Spreadsheet 
+ 
+    Get-VM $VMNameHyperV | Add-VMHardDiskDrive -ControllerType SCSI -ControllerNumber 0 -Path $VHDPATH\$TargetData}
+     else {write-host 'TargetData is Empty, HardDrive not added'}
+
   }  -ArgumentList $VMNameHyperV,$memory,$ProcessorCount,$HostIP,$Generation,$VLAN,$TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData
   }
-  pause
   
- #End Create VM's on Host Powershell Scripts#
-  
- #setup scripts
-   invoke-command -ComputerName "HOST" -credential $cred -ScriptBlock {
-   if (test-path "C:\scripts\ServerSetupScripts"){
+#End Create VM's on Host Powershell Scripts#
+ 
+#Add setup script path
+
+    invoke-command -ComputerName "$HOST" -credential $cred -ScriptBlock {
+    if (test-path "C:\scripts\ServerSetupScripts"){
     Remove-Item "C:\scripts\ServerSetupScripts" -Force -Recurse}
     start-sleep -Seconds 1
     New-Item "C:\scripts\ServerSetupScripts" -ItemType directory | out-host}
    
-Pause
+  Pause
 
-#copy to PS1 file serverscripts, to run direct on the VM
+<#
+Below Code creates and copies VM setup scripts to Host.  These scripts are to be run on the host after VM is turned on and OS setup manually.
+#>
 
-   Import-Csv -Path $MasterFile -Delimiter ',' | Where-Object { $_.PSObject.Properties.Value -ne '' } | foreach {
-   param (
+#Create .PS1 setup script for each VM. (add to domain, sets IP and DNS, changes NIC name, Restarts VM)
+
+    Import-Csv -Path $MasterFile -Delimiter ',' | Where-Object { $_.PSObject.Properties.Value -ne '' } | foreach {
+    param (
     $CurrentNetworkAdapterName = $($_.CurrentNetworkAdapterName),
     $NewNetworkAdapterName = $($_.NewNetworkAdapterName),
     $ServerName = $($_.ServerName),
@@ -111,16 +143,14 @@ Pause
     $WINS = $($_.WINS),
     $Domain = $($_.Domain),
     $user = $($_.user),
-    $HostIP = $($_.HostIP),
+    $Host = $($_.Host),
     $VMNameHyperV = $($_.VMNameHyperV),
     $outputfile = "C:\scripts\ServerSetupScripts\$ServerName.ps1"
     )
-
-invoke-command -ComputerName "Host" -credential $cred -ScriptBlock {param($outputfile,$wins,$VMNameHyperV,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain)
+invoke-command -ComputerName "$Host" -credential $cred -ScriptBlock {param($outputfile,$wins,$VMNameHyperV,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain)
 
 if($WINS -eq "" -or $WINS -eq $null)
-    {
-    
+    { 
     "Set-ExecutionPolicy Bypass" | Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Rename Adapter" | Add-Content $OutputFile
@@ -145,20 +175,18 @@ if($WINS -eq "" -or $WINS -eq $null)
     "netsh interface ip set wins '$NewNetworkAdapterName' static $WINS" | Add-Content $OutputFile
     ""| Add-Content $OutputFile
     "#Rename VM and Join to Domain" | Add-Content $OutputFile
-    "Add-Computer -DomainName $Domain -Credential (Get-Credential $User) -NewName '$ServerName' -Restart"  | Add-Content $OutputFile
-   
+    "Add-Computer -DomainName $Domain -Credential (Get-Credential $User) -NewName '$ServerName' -Restart"  | Add-Content $OutputFile 
+        }  
+      }-ArgumentList $outputfile,$wins,$VMNameHyperV,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain
     }
-       
-     }-ArgumentList $outputfile,$wins,$VMNameHyperV,$CurrentNetworkAdapterName,$NewNetworkAdapterName,$GatewayAddres,$IPAddress,$Subnet,$ServerName,$Domain
-     }
-   invoke-command -ComputerName "Host" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts\$servername*.ps1"}
-   pause
+     
+   invoke-command -ComputerName "$Host" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts\*.ps1"}
+   
 
-#End Create VM Setup Scripts and other HyperV Host Powershell Scripts#
+#End Create VM Setup Scripts#
 
 
-#Start Create Powershell scripts that copy Setupfiles to VM's on HyperV Host
-
+#Create .PS1 scripts that copies previous scripts to each VM (Enables Hyper-V Guest Services, and copy VM setup script to each VM; To be run First)
 
  Import-Csv -Path $MasterFile -Delimiter ',' | Where-Object { $_.PSObject.Properties.Value -ne '' } | foreach {
 
@@ -168,29 +196,24 @@ if($WINS -eq "" -or $WINS -eq $null)
     $ScriptOutFile = "C:\scripts\ServerSetupScripts\Run_First_Script_HyperV_GuestServices_CopySetupFiles.ps1"
     )
 
- invoke-command -ComputerName "teknetdc01" -credential $cred -ScriptBlock {param($ScriptOutFile,$DateStamp,$VMNameHyperV,$ServerName )
+ invoke-command -ComputerName "$Host" -credential $cred -ScriptBlock {param($ScriptOutFile,$DateStamp,$VMNameHyperV,$ServerName )
     
     $DateStamp = get-date -uformat "%Y-%m-%d--%H-%M-%S" # Get the date
     "Powershell Scripts to Enable/Disable Guest Services and copy Setupfiles to VM's - $DateStamp"| Add-Content $ScriptOutFile
     ""| Add-Content $ScriptOutFile
     "****Enable Guest Service Scripts****" | Add-Content $ScriptOutFile
-    ""| Add-Content $ScriptOutFile
-
-  
+    ""| Add-Content $ScriptOutFile 
     "# HyperV Host $HostIP" | Add-Content $ScriptOutFile 
     "Enable-VMIntegrationService -VMName ""$VMNameHyperV""  -Name ""Guest Service Interface""" | Add-Content $ScriptOutFile
     "Copy-VMFile ""$VMNameHyperV"" -SourcePath ""C:\Powershell\$ServerName.ps1"" -DestinationPath ""C:\Powershell\$ServerName.ps1"" -CreateFullPath -FileSource Host"| Add-Content $ScriptOutFile
     "Disable-VMIntegrationService -VMName ""$VMNameHyperV""  -Name ""Guest Service Interface""" | Add-Content $ScriptOutFile
-    ""| Add-Content $ScriptOutFile
-   
-   
+    ""| Add-Content $ScriptOutFile  
    }-argumentlist $ScriptOutFile,$DateStamp,$VMNameHyperV,$ServerName 
    
     }
-    
-   invoke-command -ComputerName "teknetdc01" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts\run_first*.ps1"
+   invoke-command -ComputerName "$host" -credential $cred -ScriptBlock {write-host '';gci "C:\scripts\ServerSetupScripts\run_first*.ps1"
    write-host ' '
    read-host '                               End of script.  Press Enter to exit.'
    write-host''}
    
-#End Create Powershell scripts that copy Setupfiles to VM's on HyperV Host  
+#End Of Script#
