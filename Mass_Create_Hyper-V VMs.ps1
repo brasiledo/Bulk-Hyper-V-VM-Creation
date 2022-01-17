@@ -117,9 +117,9 @@ Param (
      
   #Copy VHD for OS and DATA drives to set location, ONLY IF ADDED on Spreadsheet
   
-     IF ($SourceOS -ne '') {
-New-Item -ItemType "directory" -Path "$VHDPATH\$VMNameHyperV"
-Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$TargetOS"}
+   IF ($SourceOS -ne '') {
+   New-Item -ItemType "directory" -Path "$VHDPATH\$VMNameHyperV"
+   Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$TargetOS"}
    else {write-host "SourceOS is empty, OS VHD NOT Copied!"}
    IF ($SourceDATA -ne ''){Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$targetDATA"}
    Else {write-host "Sourcedata is empty, DATA VHD NOT Copied!"}
@@ -130,7 +130,7 @@ Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$TargetOS"}
 #Create New VMs
 
   New-VM -Name "$VMNameHyperV" -MemoryStartupBytes (Invoke-Expression $memory) -Generation "$Generation" | out-host
-    Set-VMProcessor -VMName "$VMNameHyperV" -Count $ProcessorCount
+  Set-VMProcessor -VMName "$VMNameHyperV" -Count $ProcessorCount
     
 #Add SwitchName, OS VHD Drive IF Present on the Spreadsheet
 
@@ -148,7 +148,7 @@ Copy-Item -Path $SourceData -Destination "$VHDPATH\$VMNameHyperV\$TargetOS"}
 #Set Data VHD IF Present on the Spreadsheet 
  
     Get-VM $VMNameHyperV | Add-VMHardDiskDrive -ControllerType SCSI -ControllerNumber 0 -Path "$TargetData,$VHDPATH,$SourceOS,$SourceData"}
-     else {write-host 'TargetData is Empty, HardDrive not added'}
+    else {write-host 'TargetData is Empty, HardDrive not added'}
 
   }  -ArgumentList $VMNameHyperV,$memory,$ProcessorCount,$HostIP,$Generation,$VLAN,$TargetOS,$TargetData,$VHDPATH,$SourceOS,$SourceData
   }
@@ -172,7 +172,7 @@ Below Code creates and copies VM setup scripts to Host.  These scripts are to be
 #Create .PS1 setup script for each VM. (add to domain, sets IP and DNS, changes NIC name, Restarts VM)
 
     Import-Csv -Path $MasterFile -Delimiter ',' | Where-Object { $_.PSObject.Properties.Value -ne '' } | foreach {
-    param (
+ param (
     $CurrentNetworkAdapterName = $($_.CurrentNetworkAdapterName),
     $NewNetworkAdapterName = $($_.NewNetworkAdapterName),
     $ServerName = $($_.ServerName),
