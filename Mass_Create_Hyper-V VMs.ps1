@@ -64,6 +64,10 @@ Version: 1.0
 Author: Brasiledo
 Date of last revision: 1/5/2022
 
+Requirements for running on Win 10 machine (powershell direct)
+Host must be local
+Must use credentials for Hyper-V administrator
+
 #>
 
 #Deletes Current CSV File 
